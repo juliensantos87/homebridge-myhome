@@ -76,10 +76,10 @@ MyHomeLightAccessory.prototype = {
   },
   setPowerState: function(characteristic, powerOn, callback) {
     if (powerOn) {
-      this.log("["+this.id+"] Setting power state to on");
+      this.log("["+this.id+"] Setting power state to on test");
       this.mhengine.sendCommand({command: '*1*1*' + this.id + '##'});
     } else {
-      this.log("["+this.id+"] Setting power state to off");
+      this.log("["+this.id+"] Setting power state to off test");
       this.mhengine.sendCommand({command: '*1*0*' + this.id +'##'});
     }
 
