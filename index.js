@@ -116,10 +116,13 @@ MyHomeLightAccessory.prototype = {
       .on('get', function(callback) { that.getPowerState("power", callback);})
       .on('set', function(value, callback) { that.setPowerState("power", value, callback);});
 
-    lightbulbService
-      .addCharacteristic(Characteristic.Brightness)
-      .on('get', function(callback) { that.getBrightness("brightness", callback);})
-      .on('set', function(value, callback) { that.setBrightness("brightness", value, callback);});
+      if (that.dimmer) {
+		lightbulbService
+	      .addCharacteristic(Characteristic.Brightness)
+	      .on('get', function(callback) { that.getBrightness("brightness", callback);})
+	      .on('set', function(value, callback) { that.setBrightness("brightness", value, callback);});
+      } 
+	
 
     return [informationService, lightbulbService];
   }
