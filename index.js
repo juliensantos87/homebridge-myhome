@@ -62,6 +62,7 @@ function MyHomeLightAccessory(log, mhengine, id, dimmer) {
   // device info
   this.id = id;
   this.name = 'light-' + id;
+  this.dimmer = dimmer;
 
   this.value = false;
 }
