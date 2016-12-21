@@ -44,7 +44,7 @@ MyHomePlatform.prototype = {
         this.log("Fetching MyHome devices.");
 
         for (var i = this.lights.length - 1; i >= 0; i--) {
-          this.foundAccessories.push(new MyHomeLightAccessory(this.log, this.mhengine, this.lights[i]));
+          this.foundAccessories.push(new MyHomeLightAccessory(this.log, this.mhengine, this.lights[i].id, this.lights[i].dimmer));
         }
 
         for (var i = this.blinds.length - 1; i >= 0; i--) {
