@@ -44,7 +44,7 @@ MyHomePlatform.prototype = {
         this.log("Fetching MyHome devices.");
 
         for (var i = this.lights.length - 1; i >= 0; i--) {
-          this.foundAccessories.push(new MyHomeLightAccessory(this.log, this.mhengine, this.lights[i]));
+          this.foundAccessories.push(new MyHomeLightAccessory(this.log, this.mhengine, this.lights[i].id, this.lights[i].dimmer));
         }
 
         for (var i = this.blinds.length - 1; i >= 0; i--) {
@@ -55,13 +55,14 @@ MyHomePlatform.prototype = {
     }
 };
 
-function MyHomeLightAccessory(log, mhengine, id) {
+function MyHomeLightAccessory(log, mhengine, id, dimmer) {
   this.log = log;
   this.mhengine = mhengine;
 
   // device info
   this.id = id;
   this.name = 'light-' + id;
+  this.dimmer = dimmer;
 
   this.value = false;
 }
@@ -76,10 +77,10 @@ MyHomeLightAccessory.prototype = {
   },
   setPowerState: function(characteristic, powerOn, callback) {
     if (powerOn) {
-      this.log("["+this.id+"] Setting power state to on");
+      this.log("["+this.id+"] Setting power state to on test");
       this.mhengine.sendCommand({command: '*1*1*' + this.id + '##'});
     } else {
-      this.log("["+this.id+"] Setting power state to off");
+      this.log("["+this.id+"] Setting power state to off test");
       this.mhengine.sendCommand({command: '*1*0*' + this.id +'##'});
     }
 
@@ -89,6 +90,14 @@ MyHomeLightAccessory.prototype = {
     this.log("["+this.id+"] Fetching power state");
     this.mhengine.sendCommand({command: '*#1*' + this.id + '##'});
 
+    callback(null, this.value);
+  },
+  setBrightness: function(characteristic, brightness, callback) {
+    this.log("["+this.id+"] Setting Brightness");
+    callback();
+  },
+  getBrightness: function(characteristic, callback) {
+    this.log("["+this.id+"] Getting Brightness");
     callback(null, this.value);
   },
   getServices: function() {
@@ -106,6 +115,11 @@ MyHomeLightAccessory.prototype = {
       .getCharacteristic(Characteristic.On)
       .on('get', function(callback) { that.getPowerState("power", callback);})
       .on('set', function(value, callback) { that.setPowerState("power", value, callback);});
+
+    lightbulbService
+      .addCharacteristic(Characteristic.Brightness)
+      .on('get', function(callback) { that.getBrightness("brightness", callback);})
+      .on('set', function(value, callback) { that.setBrightness("brightness", value, callback);});
 
     return [informationService, lightbulbService];
   }
