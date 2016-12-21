@@ -91,6 +91,14 @@ MyHomeLightAccessory.prototype = {
 
     callback(null, this.value);
   },
+  setBrightness: function(characteristic, brightness, callback) {
+    this.log("["+this.id+"] Setting Brightness");
+    callback();
+  },
+  getBrightness: function(characteristic, callback) {
+    this.log("["+this.id+"] Getting Brightness");
+    callback(null, this.value);
+  },
   getServices: function() {
     var that = this;
 
@@ -106,6 +114,11 @@ MyHomeLightAccessory.prototype = {
       .getCharacteristic(Characteristic.On)
       .on('get', function(callback) { that.getPowerState("power", callback);})
       .on('set', function(value, callback) { that.setPowerState("power", value, callback);});
+
+    lightbulbService
+      .addCharacteristic(Characteristic.Brightness)
+      .on('get', function(callback) { that.getBrightness("brightness", callback);})
+      .on('set', function(value, callback) { that.setBrightness("brightness", value, callback);});
 
     return [informationService, lightbulbService];
   }
