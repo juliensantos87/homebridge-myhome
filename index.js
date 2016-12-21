@@ -55,7 +55,7 @@ MyHomePlatform.prototype = {
     }
 };
 
-function MyHomeLightAccessory(log, mhengine, id) {
+function MyHomeLightAccessory(log, mhengine, id, dimmer) {
   this.log = log;
   this.mhengine = mhengine;
 
