@@ -1,6 +1,6 @@
 {
   "name": "homebridge-myhome",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "MyHome plugin for homebridge",
   "license": "ISC",
   "keywords": [
