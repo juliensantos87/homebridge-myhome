@@ -99,9 +99,9 @@ MyHomeLightAccessory.prototype = {
     callback();
   },
   getBrightness: function(characteristic, callback) {
-    this.log("["+this.id+"] Getting Brightness");
 	this.mhengine.sendCommand({command: '*#1*' + this.id + '##'});
-    callback(null, this.value*10);
+	this.log("["+this.id+"] Getting Brightness"+this.value);
+    callback(null, this.value);
   },
   
   
