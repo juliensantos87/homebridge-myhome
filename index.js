@@ -94,6 +94,7 @@ MyHomeLightAccessory.prototype = {
   },
   setBrightness: function(characteristic, brightlevel, callback) {
     this.log("["+this.id+"] Setting Brightness");
+// homekit brightness is a percentage as an integer ( 0 - 100 range) while the dimmer SCS range is 2-10
 	this.mhengine.sendCommand({command: '*1*' + Math.round( brightlevel/10 ) + '*' + this.id + '##'});
     callback();
   },
@@ -119,6 +120,8 @@ MyHomeLightAccessory.prototype = {
       .getCharacteristic(Characteristic.On)
       .on('get', function(callback) { that.getPowerState("power", callback);})
       .on('set', function(value, callback) { that.setPowerState("power", value, callback);});
+
+// if the dimmer is set to 1 than the brightness characteristic is added.
 
       if (that.dimmer) {
 		lightbulbService
