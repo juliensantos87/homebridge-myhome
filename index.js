@@ -93,7 +93,7 @@ MyHomeLightAccessory.prototype = {
     callback(null, this.value);
   },
   setBrightness: function(characteristic, brightlevel, callback) {
-    this.log("["+this.id+"] Setting Brightness to"  + Math.round( brightlevel/10 ) + "%" );
+    this.log("["+this.id+"] Setting Brightness to"  + brightlevel + "%" );
 // homekit brightness is a percentage as an integer ( 0 - 100 range) while the dimmer SCS range is 2-10
 	this.mhengine.sendCommand({command: '*1*' + Math.round( brightlevel/10 ) + '*' + this.id + '##'});
     callback();
