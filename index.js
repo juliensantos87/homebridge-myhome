@@ -77,10 +77,10 @@ MyHomeLightAccessory.prototype = {
   },
   setPowerState: function(characteristic, powerOn, callback) {
     if (powerOn) {
-      this.log("["+this.id+"] Setting power state to on test");
+      this.log("["+this.id+"] Setting power state to on");
       this.mhengine.sendCommand({command: '*1*1*' + this.id + '##'});
     } else {
-      this.log("["+this.id+"] Setting power state to off test");
+      this.log("["+this.id+"] Setting power state to off");
       this.mhengine.sendCommand({command: '*1*0*' + this.id +'##'});
     }
 
@@ -92,14 +92,18 @@ MyHomeLightAccessory.prototype = {
 
     callback(null, this.value);
   },
-  setBrightness: function(characteristic, brightness, callback) {
+  setBrightness: function(characteristic, brightlevel, callback) {
     this.log("["+this.id+"] Setting Brightness");
+	this.mhengine.sendCommand({command: '*1*' + Math.round( brightlevel/10 ) + '*' + this.id + '##'});
     callback();
   },
   getBrightness: function(characteristic, callback) {
     this.log("["+this.id+"] Getting Brightness");
+	this.mhengine.sendCommand({command: '*#1*' + this.id + '##'});
     callback(null, this.value);
   },
+  
+  
   getServices: function() {
     var that = this;
 
