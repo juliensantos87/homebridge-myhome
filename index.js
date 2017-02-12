@@ -44,7 +44,7 @@ MyHomePlatform.prototype = {
         this.log("Fetching MyHome devices.");
 
         for (var i = this.lights.length - 1; i >= 0; i--) {
-          this.foundAccessories.push(new MyHomeLightAccessory(this.log, this.mhengine, this.lights[i]));
+          this.foundAccessories.push(new MyHomeLightAccessory(this.log, this.mhengine, this.lights[i].id, this.lights[i].dimmer));
         }
 
         for (var i = this.blinds.length - 1; i >= 0; i--) {
@@ -55,13 +55,14 @@ MyHomePlatform.prototype = {
     }
 };
 
-function MyHomeLightAccessory(log, mhengine, id) {
+function MyHomeLightAccessory(log, mhengine, id, dimmer) {
   this.log = log;
   this.mhengine = mhengine;
 
   // device info
   this.id = id;
   this.name = 'light-' + id;
+  this.dimmer = dimmer;
 
   this.value = false;
 }
@@ -91,6 +92,19 @@ MyHomeLightAccessory.prototype = {
 
     callback(null, this.value);
   },
+  setBrightness: function(characteristic, brightlevel, callback) {
+    this.log("["+this.id+"] Setting Brightness to"  + brightlevel + "%" );
+// homekit brightness is a percentage as an integer ( 0 - 100 range) while the dimmer SCS range is 2-10
+	this.mhengine.sendCommand({command: '*1*' + Math.round( brightlevel/10 ) + '*' + this.id + '##'});
+    callback();
+  },
+  getBrightness: function(characteristic, callback) {
+	this.mhengine.sendCommand({command: '*#1*' + this.id + '##'});
+	this.log("["+this.id+"] Getting Brightness"+this.value);
+    callback(null, this.value);
+  },
+  
+  
   getServices: function() {
     var that = this;
 
@@ -106,6 +120,16 @@ MyHomeLightAccessory.prototype = {
       .getCharacteristic(Characteristic.On)
       .on('get', function(callback) { that.getPowerState("power", callback);})
       .on('set', function(value, callback) { that.setPowerState("power", value, callback);});
+
+// if the dimmer is set to 1 than the brightness characteristic is added.
+
+      if (that.dimmer) {
+		lightbulbService
+	      .addCharacteristic(Characteristic.Brightness)
+	      .on('get', function(callback) { that.getBrightness("brightness", callback);})
+	      .on('set', function(value, callback) { that.setBrightness("brightness", value, callback);});
+      } 
+	
 
     return [informationService, lightbulbService];
   }
