@@ -23,6 +23,15 @@ function encodeTemperature( data ) {
   }
 };
 
+function inArray(needle, haystack) {
+    var length = haystack.length;
+    for(var i = 0; i < length; i++) {
+        if(haystack[i] == needle)
+            return true;
+    }
+    return false;
+};
+
 module.exports = function(homebridge) {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
@@ -63,24 +72,92 @@ function MyHomePlatform(log, config){
          }
       }
     } 
-    /* Ambient temperature */
-    else if (extract = data.match(/^\*#4\*(\d+)\*0\*(\d\d\d\d)\#\#$/)) {
+    // Light 
+    if (extract = data.match(/^\*1\*(\d+)\*(\d+)##$/)) {
+      var id = extract[2];
+      for (var accessory of this.foundAccessories) {
+        if ( accessory.id == id && typeof(accessory.onLigth) == 'function') {
+          accessory.onLigth(id, extract[1]);
+        }
+      }
+    } 
+   // Blind 
+    else if (extract = data.match(/^\*2\*(\d+)\*(\d+)##$/)) {
+      var id = extract[2];
+      for (var accessory of this.foundAccessories) {
+        if ( accessory.id == id && typeof(accessory.onLigth) == 'function') {
+          accessory.onBlind(id, extract[1]);
+        }
+      }
+    } 
+    // Ambient temperature 
+    else if (extract = data.match(/^\*#4\*(\d+)\*0\*(\d+)##$/)) {
     	var id = extract[1];
     	for (var accessory of this.foundAccessories) {
     		if ( accessory.id == id && typeof(accessory.onThermostatEvent) == 'function') {
-				accessory.onThermostatEvent(id,'temperature',decodeTemperature(extract[2]));
+				  accessory.onThermostatEvent(id,'temperature',decodeTemperature(extract[2]));
   			}
-        }
+      }
     }
-    /* Setpoint temperature */
-    else if (extract = data.match(/^\*#4\*(\d+)\*14\*(\d\d\d\d)\*(\d+)\#\#$/)) {
-    	var id = extract[1];
-    	for (var accessory of this.foundAccessories) {
-    		if ( accessory.id == id && typeof(accessory.onThermostatEvent) == 'function') {
-				accessory.onThermostatEvent(id,'targetTemperature',decodeTemperature(extract[2]));
-  			}
+    // Zone operation temperature with adjust by local offset
+    else if (extract = data.match(/^\*#4\*(\d+)\*12\*(\d+)\*3##$/)) {
+      var id = extract[1];
+      for (var accessory of this.foundAccessories) {
+        if ( accessory.id == id && typeof(accessory.onThermostatEvent) == 'function') {
+          accessory.onThermostatEvent(id,'targetTemperature',decodeTemperature(extract[2]));
         }
+      }
+    } 
+    // Zone local offset
+    else if (extract = data.match(/^\*#4\*(\d+)\*13\*(\d+)##$/)) {
+      var id = extract[1];
+      for (var accessory of this.foundAccessories) {
+        if ( accessory.id == id && typeof(accessory.onThermostatEvent) == 'function') {
+          accessory.onThermostatEvent(id,'localOffset',extract[2]);
+        }
+      }
+    } 
+    // Setpoint temperature
+    else if (extract = data.match(/^\*#4\*(\d+)\*14\*(\d+)\*(\d+)##$/)) {
+      var id = extract[1];
+      for (var accessory of this.foundAccessories) {
+        if ( accessory.id == id && typeof(accessory.onThermostatEvent) == 'function') {
+          accessory.onThermostatEvent(id,'targetTemperature',decodeTemperature(extract[2]));
+        }
+      }
     }
+    // Valves status
+    else if (extract = data.match(/^\*#4\*(\d+)\*19\*(\d)\*(\d)##$/) ) {
+      var id = extract[1];
+      for (var accessory of this.foundAccessories) {
+        if ( accessory.id == id && typeof(accessory.onThermostatEvent) == 'function') {
+          accessory.onThermostatEvent(id,'cooling',extract[2]);
+          accessory.onThermostatEvent(id,'heating',extract[3]);
+        }
+      }
+    } 
+    // Actuator status
+    else if (extract = data.match(/^\*#4\*(\d+)#(\d+)\*20\*(\d+)##$/)) {
+      var id = extract[1];
+      for (var accessory of this.foundAccessories) {
+        if ( accessory.id == id && typeof(accessory.onThermostatEvent) == 'function') {
+          accessory.onThermostatEvent(id,'actuatorStatus',extract[3]);
+
+          // Ask valve status
+          this.mhengine.sendCommand({command: '*#4*' + id + '*19##',log:true});
+        }
+      }
+    }
+    //  Zone operation mode
+    else if (extract = data.match(/^\*4\*(\d+)\*(\d+)##$/)) {
+      var id = extract[1];
+      for (var accessory of this.foundAccessories) {
+        if ( accessory.id == id && typeof(accessory.onThermostatEvent) == 'function') {
+          accessory.onThermostatEvent(id,'operationMode',extract[2]);
+        }
+      }
+    }
+ 
     // gateway event 
     else if (result[1] == '#13') {
      this.log("gateway is still alive" );
@@ -88,7 +165,8 @@ function MyHomePlatform(log, config){
       // retart monitor  if not event is comming since 1 min  
       this.monitorTimeout = setTimeout(function(){
 	          this.log("monitor connexion is dead, restart it" );
-	          this.mhengine.startMonitor()
+	          this.mhengine.startMonitor();
+            this.updateStatus();
           }.bind(this),60000);
     }
   }.bind(this)
@@ -96,6 +174,12 @@ function MyHomePlatform(log, config){
 }
 
 MyHomePlatform.prototype = {
+    updateAccessoriesStatus: function() {
+      this.log("Fetching accessories status" );
+      for (var accessory of this.foundAccessories) {     
+        accessory.updateStatus(); 
+      }
+    },
     accessories: function(callback) {
         this.log("Fetching MyHome devices.");
 
@@ -112,6 +196,8 @@ MyHomePlatform.prototype = {
         }
 
         callback(this.foundAccessories);
+
+        this.updateAccessoriesStatus();
     }
 };
 function MyHomeThermostatAccessory(log, mhengine, thermostat) {
@@ -135,22 +221,104 @@ function MyHomeThermostatAccessory(log, mhengine, thermostat) {
 }
 
 MyHomeThermostatAccessory.prototype = {
+  updateStatus: function () {
+    this.log("["+this.id+"] updateStatus ");
+    this.mhengine.sendCommand({command: '*#4*' + this.id + '##',log:true});
+ },
   onThermostatEvent: function(id,event,value){
   	if (event =='temperature') {
-		this.temperature = value;
-		this.log("zone[" +this.zone+"] temperature (" + this.temperature + ")" );		
-  	}
+  		this.temperature = value;
+  		this.log("zone[" +this.zone+"] temperature (" + this.temperature + ")" );		
+    }
   	else if (event =='targetTemperature') {
-		this.targetTemperature = value;
-		this.log("zone[" +this.zone+"] target temperature (" + this.targetTemperature+ ")" );	
-  	}
-  },
+  		this.targetTemperature = value;
+  		this.log("zone[" +this.zone+"] target temperature (" + this.targetTemperature+ ")" );	
+    }
+    else if (event =='actuatorStatus') {
+      var status ;
+      if ( value == '0' )
+        status = 'OFF';
+      else if ( value == '1' )
+        status = 'ON';
+      else if ( value == '4' )
+        status = 'STOP';
+      else 
+        status = 'not decoded :'+ value;
+
+      this.log("zone[" +this.zone+"] actuator status (" + status+ ")" );  
+    }
+    else if (event =='localOffset') {
+       var status ;
+      if ( value == '00' )
+        status = '0';
+      else if ( value == '01' )
+        status = '+1';
+      else if ( value == '11' )
+        status = '-1';
+      else if ( value == '02' )
+        status = '+2';
+      else if ( value ==  '12' )
+        status = '-2';
+      else if ( value ==  '03' )
+        status = '+3';
+      else if ( value ==  '13' )
+        status = '-3';
+      else if ( value ==  '4' )
+        status = 'Local OFF';
+      else if ( value ==  '5' )
+        status = 'Local protection';
+      this.log("zone[" +this.zone+"] local offset (" + status+ ")" );     
+    }
+    else if (event =='operationMode') {
+      var status ;
+      if ( value == '0' ) {
+        status = 'Conditioning';
+        this.heatingCoolingState = Characteristic.CurrentHeatingCoolingState.COOL;
+      }
+      else if ( value == '1' ){
+        status = 'Heating';
+        this.heatingCoolingState = Characteristic.CurrentHeatingCoolingState.HEAT;
+      }
+      else  if ( value == '102' ){
+        status = 'Antifreeze';
+        this.heatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
+      }
+      else if ( value == '202' ){
+        status = 'Thermal Protection';
+        this.heatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
+      }
+      else if ( value ==  '303' ){
+        status = 'Generic OFF';
+        this.heatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
+      }
+      this.log("zone[" +this.zone+"] operation mode (" + status+ ")" );     
+    }
+    else if (event =='cooling') {
+     if (inArray(value,[1,2])) {
+        this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.COOL;
+        this.log("zone[" +this.zone+"] cooling ");   
+      } else if (this.targetheatingCoolingState != Characteristic.CurrentHeatingCoolingState.HEAT) {
+        this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
+      }
+    }
+    else if (event =='heating') {
+      if (inArray(value,[1,2])) {
+        this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.HEAT;
+        this.log("zone[" +this.zone+"] heating ");   
+      } else if (this.targetheatingCoolingState != Characteristic.CurrentHeatingCoolingState.COOL) {
+        this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
+        this.log("zone[" +this.zone+"] off "); 
+      }
+    }
+ },
   getHeatingCoolingState: function(callback) {
     this.log("zone[" +this.zone+"] getHeatingCoolingState :"+ this.heatingCoolingState);
+    this.mhengine.sendCommand({command: '*#4*' + this.id + '##',log:true});
     callback(null,this.heatingCoolingState);
   },
   getTargetHeatingCoolingState: function( callback) {
     this.log("zone[" +this.zone+"] getTargetHeatingCoolingState :"+ this.targetheatingCoolingState);
+    this.mhengine.sendCommand({command: '*#4*' + this.zone + '*19##',log:true});
     callback(null,this.targetheatingCoolingState);
    },
   setTargetHeatingCoolingState: function(value, callback) {
@@ -247,7 +415,11 @@ function MyHomeLightAccessory(log, mhengine, light) {
 }
 
 MyHomeLightAccessory.prototype = {
-  change: function(value) {
+  updateStatus: function () {
+    this.log("["+this.id+"] updateStatus ");
+    this.mhengine.sendCommand({command: '*#1*' + this.id + '##',log:true});
+  },
+  onLigth: function(id, value) {
     if (value == '0') {
       this.log("["+this.id+"] power off");
       this.value = false;
@@ -343,6 +515,10 @@ function MyHomeBlindAccessory(log, mhengine, blind) {
 }
 
 MyHomeBlindAccessory.prototype = {
+  updateStatus: function () {
+    this.log("["+this.id+"] updateStatus ");
+    this.mhengine.sendCommand({command: '*#2*' + this.id + '##',log:true});
+ }, 
   sendPacket: function() {
     var that = this;
     this.packetTimeout = setTimeout(function(){clearTimeout(that.packetTimeout);that.packetTimeout = null;}, 2000);
@@ -367,7 +543,7 @@ MyHomeBlindAccessory.prototype = {
     this.isMoving = true;
     this.sendPacket();
   },
-  change: function(direction) {
+  onBlind: function(id,direction) {
     var that = this;
     this.log("["+this.id+"] change  dir : "+ direction + " pos:"+ this.position + " tag:" +  this.target);
 
