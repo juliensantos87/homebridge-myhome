@@ -61,17 +61,6 @@ function MyHomePlatform(log, config){
     var result = data.split('*');
     var extract;
 
-    // light and auto event 
-    if (result[1] == '1' || result[1] == '2') {
-      for (var i = this.foundAccessories.length - 1; i >= 0; i--) {
-        if (result[3] == this.foundAccessories[i].id + '##') {
-            // decode value *2*1000#<what>*<where>##
-            var stateValue = result[2].split('#'); 
-            if ( stateValue.length == 1)
-              this.foundAccessories[i].change(stateValue[0]);
-         }
-      }
-    } 
     // Light 
     if (extract = data.match(/^\*1\*(\d+)\*(\d+)##$/)) {
       var id = extract[2];
@@ -85,7 +74,7 @@ function MyHomePlatform(log, config){
     else if (extract = data.match(/^\*2\*(\d+)\*(\d+)##$/)) {
       var id = extract[2];
       for (var accessory of this.foundAccessories) {
-        if ( accessory.id == id && typeof(accessory.onLigth) == 'function') {
+        if ( accessory.id == id && typeof(accessory.onBlind) == 'function') {
           accessory.onBlind(id, extract[1]);
         }
       }
@@ -163,17 +152,20 @@ function MyHomePlatform(log, config){
      this.log("gateway is still alive" );
       clearTimeout(this.monitorTimeout)
       // retart monitor  if not event is comming since 1 min  
-      this.monitorTimeout = setTimeout(function(){
-	          this.log("monitor connexion is dead, restart it" );
-	          this.mhengine.startMonitor();
-            this.updateStatus();
-          }.bind(this),60000);
-    }
+      this.monitorTimeout = setTimeout(function(){this.restartMonitorConnection();}.bind(this),60000/*1 min*/);
+   }
   }.bind(this)
   );
 }
 
 MyHomePlatform.prototype = {
+	restartMonitorConnection: function() {
+	  this.log("monitor connexion is dead, restart it" );
+      this.mhengine.startMonitor();
+      this.updateAccessoriesStatus();
+      clearTimeout(this.monitorTimeout);
+      this.monitorTimeout = setTimeout(function(){this.restartMonitorConnection();}.bind(this),120000/*2 min*/);
+    },
     updateAccessoriesStatus: function() {
       this.log("Fetching accessories status" );
       for (var accessory of this.foundAccessories) {     
@@ -196,7 +188,6 @@ MyHomePlatform.prototype = {
         }
 
         callback(this.foundAccessories);
-
         this.updateAccessoriesStatus();
     }
 };
@@ -502,14 +493,12 @@ function MyHomeBlindAccessory(log, mhengine, blind) {
 
   this.time = blind.time;
 
-  this.state = Characteristic.PositionState.STOPPED;
-  this. position = 0;
+  this.state            = Characteristic.PositionState.STOPPED;
+  this.runningDirection = Characteristic.PositionState.STOPPED;
+  this.position = 0;
   this.target = 0;
 
-  this.isMoving = false;
-
-  this.timeout = null;
-
+  this.moveTrakingTimeout = null;
   this.packetTimeout = null;
   this.positionTimeout = null;
 }
@@ -517,108 +506,110 @@ function MyHomeBlindAccessory(log, mhengine, blind) {
 MyHomeBlindAccessory.prototype = {
   updateStatus: function () {
     this.log("["+this.id+"] updateStatus ");
-    this.mhengine.sendCommand({command: '*#2*' + this.id + '##',log:true});
+    this.mhengine.sendCommand({command: '*2*2*' + this.id + '##',log:true});
+    this.position = 0;
+    this.target = 0;
  }, 
   sendPacket: function() {
-    var that = this;
-    this.packetTimeout = setTimeout(function(){clearTimeout(that.packetTimeout);that.packetTimeout = null;}, 2000);
+    clearTimeout(this.packetTimeout);
+    this.packetTimeout = setTimeout(function(){clearTimeout(this.packetTimeout);this.packetTimeout = null;}.bind(this), 2000);
   },
   moveStop: function() {
-    this.log("["+this.id+"] Moving stop");
-
+    this.log("["+this.id+"] Blind send moving stop");
+    this.runningDirection = Characteristic.PositionState.STOPPED;
     this.mhengine.sendCommand({command: '*2*0*' + this.id + '##',log:true});
-    this.isMoving = false;
+    this.sendPacket();
   },
   moveUp: function() {
-    this.log("["+this.id+"] Moving up");
-
+    this.log("["+this.id+"] Blind send moving up");
+    this.runningDirection = Characteristic.PositionState.INCREASING;
     this.mhengine.sendCommand({command: '*2*1*' + this.id + '##',log:true});
-    this.isMoving = true;
     this.sendPacket();
   },
   moveDown: function() {
-    this.log("["+this.id+"] Moving down");
-
+    this.log("["+this.id+"] Blind send moving down");
+    this.runningDirection = Characteristic.PositionState.DECREASING;
     this.mhengine.sendCommand({command: '*2*2*' + this.id + '##',log:true});
-    this.isMoving = true;
     this.sendPacket();
   },
   onBlind: function(id,direction) {
-    var that = this;
     this.log("["+this.id+"] change  dir : "+ direction + " pos:"+ this.position + " tag:" +  this.target);
 
-    if (direction == '0' && !this.packetTimeout) {
-      clearTimeout(this.positionTimeout);
-      this.isMoving = false;
-      this.target = this.position;
+    if (direction == '0'  ) {
       this.state = Characteristic.PositionState.STOPPED;
-       this.log("["+this.id+"] change :  stop");
-    } else if (direction == '1') {
-      this.isMoving = true;
-
+    } else if (direction == '1'  ) {
+      this.state = Characteristic.PositionState.INCREASING;
+    } else if (direction == '2'  ) {
+      this.state = Characteristic.PositionState.DECREASING;
+    }
+    if (this.runningDirection == this.state) {
+        clearTimeout(this.packetTimeout);
+        this.packetTimeout = null;
+        this.evaluatePosition();
+    }  
+  },
+  evaluatePosition: function() {
+    clearTimeout(this.positionTimeout); 
+    if (this.state == Characteristic.PositionState.STOPPED) {
+      this.log("["+this.id+"] Blind STOP      pos:"+ this.position + " tag:" +  this.target);
+    } else if (this.state == Characteristic.PositionState.INCREASING) {
+      this.log("["+this.id+"] Blind moving UP pos:"+ this.position + " tag:" +  this.target);
       if (this.position < 100) {
         this.position++;
-        this.state = Characteristic.PositionState.INCREASING;
-        clearTimeout(this.positionTimeout);
-        this.positionTimeout = setTimeout(function(){that.change(direction);}, this.time / 100 * 1000);
+        this.positionTimeout = setTimeout(function(){this.evaluatePosition();}.bind(this), this.time / 100 * 1000);
       }
-    } else if (direction == '2') {
-      this.isMoving = true;
-
+    } else if (this.state == Characteristic.PositionState.DECREASING) {
+      this.log("["+this.id+"] Blind moving DOWN pos:"+ this.position + " tag:" +  this.target);
       if (this.position > 0) {
         this.position--;
-        this.state = Characteristic.PositionState.DECREASING;
-        clearTimeout(this.positionTimeout);
-        this.positionTimeout = setTimeout(function(){that.change(direction);}, this.time / 100 * 1000);
+        this.positionTimeout = setTimeout(function(){this.evaluatePosition();}.bind(this), this.time / 100 * 1000);
       }
     }
   },
   move: function() {
-    var that = this;
-
-    if (this.target < this.position) {
-      if ( (this.state != Characteristic.PositionState.DECREASING && !this.packetTimeout)||!this.isMoving ) {
-        this.moveDown();
-      }
-    } else if (this.target > this.position) {
-      if ( (this.state != Characteristic.PositionState.INCREASING && !this.packetTimeout)||!this.isMoving) {
-        this.moveUp();
+    if( this.packetTimeout == null) { // check if a command is pending  
+      if (this.target < this.position ) {
+        var offset = Math.abs(this.target - this.position) ;
+        if ( this.state != Characteristic.PositionState.DECREASING  &&  offset > 5) {
+          this.moveDown();
+        }
+      } else if (this.target > this.position  ) {
+        var offset = Math.abs(this.target - this.position) ;
+        if (this.state != Characteristic.PositionState.INCREASING &&  offset > 5 ) {
+          this.moveUp();
+        }
+      } else if (this.state != Characteristic.PositionState.STOPPED ){
+          this.moveStop();
+      } else  {
+         this.log("["+this.id+"] Blind position is good : stop moving "+ this.position + " tag:" +  this.target);
+        return; 
       }
     } else {
-      this.moveStop();
-
-      return;
+      this.log("["+this.id+"] Blind command is still pending : wait for action");
     }
-
-    clearTimeout(this.timeout);    
-    this.timeout = setTimeout(function(){that.move();}, (this.time / 100 * 1000));
+    clearTimeout(this.moveTrakingTimeout);  
+    // recheck postion in 500 ms
+    this.moveTrakingTimeout = setTimeout(function(){this.move();}.bind(this), 500);
   },
   getPosition: function(characteristic, callback) {
-    this.log("["+this.id+"] Fetching position");
-    this.mhengine.sendCommand({command: '*#2*' + this.id + '##',log:true});
-
+    this.log("["+this.id+"] Blind fetching position :" + this.position);
     callback(null, this.position);
   },
   setTarget: function(target, callback) {
-    this.log("["+this.id+"] Setting Target :" + target );
-    if ( this.isMoving )
-    {
-       this.log("["+this.id+"] stop move " );
-       clearTimeout(this.timeout);
-    }
+    this.log("["+this.id+"] Blind setting Target :" + target );
+    clearTimeout(this.moveTrakingTimeout);
+    this.moveTrakingTimeout = null;
     this.target = target;
     this.move();
 
     callback();
   },
   getTarget: function(characteristic, callback) {
-    this.log("["+this.id+"] Fetching target");
-
+    this.log("["+this.id+"] Blind fetching target :" + this.target);
     callback(null, this.target);
   },
   getState: function(characteristic, callback) {
-    this.log("["+this.id+"] Fetching State");
-
+    this.log("["+this.id+"] Blind fetching State :" + this.state);
     callback(null, this.state);
   },
   getServices: function() {
