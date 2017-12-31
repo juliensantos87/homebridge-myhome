@@ -39,6 +39,7 @@ module.exports = function(homebridge) {
 };
 
 function MyHomePlatform(log, config){
+  this.logCmd = false;
   // auth info
   this.host = config["host"];
   this.password =config["password"];
@@ -49,12 +50,11 @@ function MyHomePlatform(log, config){
 
   this.log = log;
 
-  this.mhengine = new myhome.engine({host: this.host});
+  this.mhengine = new myhome.engine({host: this.host,log:this.logCmd});
 
   this.foundAccessories = [];
 
   this.monitorTimeout = null;
-  var that = this;
 
   // check change
   this.mhengine.on ('packet', function (data) {
@@ -131,9 +131,6 @@ function MyHomePlatform(log, config){
       for (var accessory of this.foundAccessories) {
         if ( accessory.id == id && typeof(accessory.onThermostatEvent) == 'function') {
           accessory.onThermostatEvent(id,'actuatorStatus',extract[3]);
-
-          // Ask valve status
-          this.mhengine.sendCommand({command: '*#4*' + id + '*19##',log:true});
         }
       }
     }
@@ -149,16 +146,20 @@ function MyHomePlatform(log, config){
  
     // gateway event 
     else if (result[1] == '#13') {
-     this.log("gateway is still alive" );
       clearTimeout(this.monitorTimeout)
       // retart monitor  if not event is comming since 1 min  
-      this.monitorTimeout = setTimeout(function(){this.restartMonitorConnection();}.bind(this),60000/*1 min*/);
+      this.monitorTimeout = setTimeout(function(){this.restartMonitorConnection();}.bind(this),120000/*2 min*/);
    }
   }.bind(this)
   );
+
+   setInterval(function(){ this.checkMonitor(); }.bind(this), 30 * 1000);
 }
 
 MyHomePlatform.prototype = {
+	checkMonitor: function() {
+		this.mhengine.sendCommand({command: '*#13**15##',log:this.logCmd});
+    },
 	restartMonitorConnection: function() {
 	  this.log("monitor connexion is dead, restart it" );
       this.mhengine.startMonitor();
@@ -192,6 +193,7 @@ MyHomePlatform.prototype = {
     }
 };
 function MyHomeThermostatAccessory(log, mhengine, thermostat) {
+  this.logCmd = false;
   this.log = log;
   this.mhengine = mhengine;
 
@@ -214,16 +216,16 @@ function MyHomeThermostatAccessory(log, mhengine, thermostat) {
 MyHomeThermostatAccessory.prototype = {
   updateStatus: function () {
     this.log("["+this.id+"] updateStatus ");
-    this.mhengine.sendCommand({command: '*#4*' + this.id + '##',log:true});
+    this.mhengine.sendCommand({command: '*#4*' + this.id + '##',log:this.logCmd});
  },
   onThermostatEvent: function(id,event,value){
   	if (event =='temperature') {
   		this.temperature = value;
-  		this.log("zone[" +this.zone+"] temperature (" + this.temperature + ")" );		
+  		this.log("["+this.id+"] zone["+this.zone+"] temperature (" + this.temperature + ")" );		
     }
   	else if (event =='targetTemperature') {
   		this.targetTemperature = value;
-  		this.log("zone[" +this.zone+"] target temperature (" + this.targetTemperature+ ")" );	
+  		this.log("["+this.id+"] zone["+this.zone+"] target temperature (" + this.targetTemperature+ ")" );	
     }
     else if (event =='actuatorStatus') {
       var status ;
@@ -236,7 +238,10 @@ MyHomeThermostatAccessory.prototype = {
       else 
         status = 'not decoded :'+ value;
 
-      this.log("zone[" +this.zone+"] actuator status (" + status+ ")" );  
+      this.log("["+this.id+"] zone["+this.zone+"] actuator status (" + status+ ")" );  
+
+      // Ask valve status
+      this.mhengine.sendCommand({command: '*#4*' + id + '*19##',log:this.logCmd});
     }
     else if (event =='localOffset') {
        var status ;
@@ -258,7 +263,7 @@ MyHomeThermostatAccessory.prototype = {
         status = 'Local OFF';
       else if ( value ==  '5' )
         status = 'Local protection';
-      this.log("zone[" +this.zone+"] local offset (" + status+ ")" );     
+      this.log("["+this.id+"] zone["+this.zone+"] local offset (" + status+ ")" );     
     }
     else if (event =='operationMode') {
       var status ;
@@ -282,70 +287,69 @@ MyHomeThermostatAccessory.prototype = {
         status = 'Generic OFF';
         this.heatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
       }
-      this.log("zone[" +this.zone+"] operation mode (" + status+ ")" );     
+      this.log("["+this.id+"] zone["+this.zone+"] operation mode (" + status+ ")" );     
     }
     else if (event =='cooling') {
      if (inArray(value,[1,2])) {
         this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.COOL;
-        this.log("zone[" +this.zone+"] cooling ");   
+        this.log("["+this.id+"] zone["+this.zone+"] cooling ");   
       } else if (this.targetheatingCoolingState != Characteristic.CurrentHeatingCoolingState.HEAT) {
         this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
+        this.log("["+this.id+"] zone["+this.zone+"] off "); 
       }
     }
     else if (event =='heating') {
       if (inArray(value,[1,2])) {
         this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.HEAT;
-        this.log("zone[" +this.zone+"] heating ");   
+        this.log("["+this.id+"] zone["+this.zone+"] heating ");   
       } else if (this.targetheatingCoolingState != Characteristic.CurrentHeatingCoolingState.COOL) {
         this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
-        this.log("zone[" +this.zone+"] off "); 
+        this.log("["+this.id+"] zone["+this.zone+"] off "); 
       }
     }
  },
   getHeatingCoolingState: function(callback) {
-    this.log("zone[" +this.zone+"] getHeatingCoolingState :"+ this.heatingCoolingState);
-    this.mhengine.sendCommand({command: '*#4*' + this.id + '##',log:true});
+    this.log("["+this.id+"] zone["+this.zone+"] getHeatingCoolingState :"+ this.heatingCoolingState);
+    this.mhengine.sendCommand({command: '*#4*' + this.id + '##',log:this.logCmd});
     callback(null,this.heatingCoolingState);
   },
   getTargetHeatingCoolingState: function( callback) {
-    this.log("zone[" +this.zone+"] getTargetHeatingCoolingState :"+ this.targetheatingCoolingState);
-    this.mhengine.sendCommand({command: '*#4*' + this.zone + '*19##',log:true});
+    this.log("["+this.id+"] zone["+this.zone+"] getTargetHeatingCoolingState :"+ this.targetheatingCoolingState);
+    this.mhengine.sendCommand({command: '*#4*' + this.zone + '*19##',log:this.logCmd});
     callback(null,this.targetheatingCoolingState);
    },
   setTargetHeatingCoolingState: function(value, callback) {
-    this.log("zone[" +this.zone+"] setTargetHeatingCoolingState :"+ value );
+    this.log("["+this.id+"] zone["+this.zone+"] setTargetHeatingCoolingState :"+ value );
     this.targetheatingCoolingState = value;
     callback();
   },
   getCurrentTemperature: function( callback) {
-     this.log("zone[" +this.zone+"] getCurrentTemperature :" + this.temperature);
-     this.mhengine.sendCommand({command: '*#4*' + this.zone + '*0##',log:true});
+     this.log("["+this.id+"] zone["+this.zone+"] getCurrentTemperature :" + this.temperature);
+     this.mhengine.sendCommand({command: '*#4*' + this.zone + '*0##',log:this.logCmd});
      callback(null,this.temperature);
   },
   getTargetTemperature: function( callback) {
-     this.log("zone[" +this.zone+"] getTargetTemperature :" + this.targetTemperature );
-     this.mhengine.sendCommand({command: '*#4*' + this.zone + '*14##',log:true});
+     this.log("["+this.id+"] zone["+this.zone+"] getTargetTemperature :" + this.targetTemperature );
+     this.mhengine.sendCommand({command: '*#4*' + this.zone + '*14##',log:this.logCmd});
      callback(null,this.targetTemperature);
   },
   setTargetTemperature: function(value, callback) {
-    this.log("zone[" +this.zone+"] setTargetTemperature :" + value);
+    this.log("["+this.id+"] zone["+this.zone+"] setTargetTemperature :" + value);
     this.targetTemperature = value;
     var temperature = encodeTemperature(value);
-    this.mhengine.sendCommand({command: '*#4*'+ this.zone + '*14*' + temperature + '*1##',log:true}); 
+    this.mhengine.sendCommand({command: '*#4*'+ this.zone + '*14*' + temperature + '*1##',log:this.logCmd}); 
     callback();
   },
   getDisplayUnits: function( callback) {
-    this.log("zone[" +this.zone+"] getDisplayUnits :" + this.displayUnits);
+    this.log("["+this.id+"] zone["+this.zone+"] getDisplayUnits :" + this.displayUnits);
     callback(null, this.displayUnits);
   },
   setDisplayUnits: function(value, callback) {
-    this.log("zone[" +this.zone+"] setDisplayUnits :" + value);
+    this.log("["+this.id+"] zone["+this.zone+"] setDisplayUnits :" + value);
     this.displayUnits = value;
     callback();
   },
  getServices: function() {
-    var that = this;
-
     var thermostatService = new Service.Thermostat();
     var informationService = new Service.AccessoryInformation();
 
@@ -356,26 +360,26 @@ MyHomeThermostatAccessory.prototype = {
 
     thermostatService
       .getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-      .on('get', function(callback) { that.getHeatingCoolingState(callback);});
+      .on('get', function(callback) { this.getHeatingCoolingState(callback);}.bind(this));
 
     thermostatService
       .getCharacteristic(Characteristic.TargetHeatingCoolingState)
-      .on('get', function(callback) { that.getTargetHeatingCoolingState(callback);} )
-      .on('set', function(value, callback) { that.setTargetHeatingCoolingState(value,callback);} );
+      .on('get', function(callback) { this.getTargetHeatingCoolingState(callback);}.bind(this) )
+      .on('set', function(value, callback) { this.setTargetHeatingCoolingState(value,callback);}.bind(this) );
 
     thermostatService
       .getCharacteristic(Characteristic.CurrentTemperature)
-      .on('get', function(callback) {that.getCurrentTemperature(callback);});
+      .on('get', function(callback) {this.getCurrentTemperature(callback);}.bind(this));
 
     thermostatService
       .getCharacteristic(Characteristic.TargetTemperature)
-      .on('get', function(callback) { that.getTargetTemperature(callback);})
-      .on('set', function(value, callback) { that.setTargetTemperature(value,callback);});
+      .on('get', function(callback) { this.getTargetTemperature(callback);}.bind(this))
+      .on('set', function(value, callback) { this.setTargetTemperature(value,callback);}.bind(this));
 
     thermostatService
       .getCharacteristic(Characteristic.TemperatureDisplayUnits)
-      .on('get', function(callback) { that.getDisplayUnits(callback);})
-      .on('set', function(value, callback) { that.setDisplayUnits(value,callback);});
+      .on('get', function(callback) { this.getDisplayUnits(callback);}.bind(this))
+      .on('set', function(value, callback) { this.setDisplayUnits(value,callback);}.bind(this));
 
 
     return [informationService, thermostatService];
@@ -385,6 +389,7 @@ MyHomeThermostatAccessory.prototype = {
 function MyHomeLightAccessory(log, mhengine, light) {
   this.log = log;
   this.mhengine = mhengine;
+  this.logCmd = false;
 
   // device info
   this.id     = light.id;
@@ -408,7 +413,7 @@ function MyHomeLightAccessory(log, mhengine, light) {
 MyHomeLightAccessory.prototype = {
   updateStatus: function () {
     this.log("["+this.id+"] updateStatus ");
-    this.mhengine.sendCommand({command: '*#1*' + this.id + '##',log:true});
+    this.mhengine.sendCommand({command: '*#1*' + this.id + '##',log:this.logCmd});
   },
   onLigth: function(id, value) {
     if (value == '0') {
@@ -422,35 +427,33 @@ MyHomeLightAccessory.prototype = {
   setPowerState: function(characteristic, powerOn, callback) {
     if (powerOn) {
       this.log("["+this.id+"] Setting power state to on");
-      this.mhengine.sendCommand({command: '*1*1*' + this.id + '##',log:true});
+      this.mhengine.sendCommand({command: '*1*1*' + this.id + '##',log:this.logCmd});
     } else {
       this.log("["+this.id+"] Setting power state to off");
-      this.mhengine.sendCommand({command: '*1*0*' + this.id +'##',log:true});
+      this.mhengine.sendCommand({command: '*1*0*' + this.id +'##',log:this.logCmd});
     }
 
     callback();
   },
   getPowerState: function(characteristic, callback) {
     this.log("["+this.id+"] Fetching power state :"+this.value);
-    this.mhengine.sendCommand({command: '*#1*' + this.id + '##',log:true});
+    this.mhengine.sendCommand({command: '*#1*' + this.id + '##',log:this.logCmd});
     callback(null,this.value);
   },
   setBrightness: function(characteristic, brightlevel, callback) {
     this.log("["+this.id+"] Setting Brightness to"  + brightlevel + "%" );
     // homekit brightness is a percentage as an integer ( 0 - 100 range) while the dimmer SCS range is 2-10
-	this.mhengine.sendCommand({command: '*1*' + Math.round( brightlevel/10 ) + '*' + this.id + '##',log:true});
+    this.mhengine.sendCommand({command: '*1*' + Math.round( brightlevel/10 ) + '*' + this.id + '##',log:this.logCmd});
     callback();
   },
   getBrightness: function(characteristic, callback) {
-	this.mhengine.sendCommand({command: '*#1*' + this.id + '##',log:true});
-	this.log("["+this.id+"] Getting Brightness"+this.value);
+  	this.mhengine.sendCommand({command: '*#1*' + this.id + '##',log:this.logCmd});
+  	this.log("["+this.id+"] Getting Brightness"+this.value);
     callback(null, this.value);
   },
   
   
   getServices: function() {
-    var that = this;
-
     var lightbulbService = new Service.Lightbulb();
     var informationService = new Service.AccessoryInformation();
 
@@ -461,15 +464,15 @@ MyHomeLightAccessory.prototype = {
 
     lightbulbService
       .getCharacteristic(Characteristic.On)
-      .on('get', function(callback) { that.getPowerState("power", callback);})
-      .on('set', function(value, callback) { that.setPowerState("power", value, callback);});
+      .on('get', function(callback) { this.getPowerState("power", callback);}.bind(this))
+      .on('set', function(value, callback) { this.setPowerState("power", value, callback);}.bind(this));
 
     // if the dimmer is set to 1 than the brightness characteristic is added.
-    if (that.dimmer) {
+    if (this.dimmer) {
 		  lightbulbService
 	      .addCharacteristic(Characteristic.Brightness)
-	      .on('get', function(callback) { that.getBrightness("brightness", callback);})
-	      .on('set', function(value, callback) { that.setBrightness("brightness", value, callback);});
+	      .on('get', function(callback) { this.getBrightness("brightness", callback);}.bind(this))
+	      .on('set', function(value, callback) { this.setBrightness("brightness", value, callback);}.bind(this));
     } 
 	
 
@@ -478,8 +481,7 @@ MyHomeLightAccessory.prototype = {
 };
 
 function MyHomeBlindAccessory(log, mhengine, blind) {
-  var that = this;
-
+  this.logCmd = false;
   this.log = log;
   this.mhengine = mhengine;
 
@@ -506,7 +508,7 @@ function MyHomeBlindAccessory(log, mhengine, blind) {
 MyHomeBlindAccessory.prototype = {
   updateStatus: function () {
     this.log("["+this.id+"] updateStatus ");
-    this.mhengine.sendCommand({command: '*2*2*' + this.id + '##',log:true});
+    this.mhengine.sendCommand({command: '*2*2*' + this.id + '##',log:this.logCmd});
     this.position = 0;
     this.target = 0;
  }, 
@@ -517,19 +519,19 @@ MyHomeBlindAccessory.prototype = {
   moveStop: function() {
     this.log("["+this.id+"] Blind send moving stop");
     this.runningDirection = Characteristic.PositionState.STOPPED;
-    this.mhengine.sendCommand({command: '*2*0*' + this.id + '##',log:true});
+    this.mhengine.sendCommand({command: '*2*0*' + this.id + '##',log:this.logCmd});
     this.sendPacket();
   },
   moveUp: function() {
     this.log("["+this.id+"] Blind send moving up");
     this.runningDirection = Characteristic.PositionState.INCREASING;
-    this.mhengine.sendCommand({command: '*2*1*' + this.id + '##',log:true});
+    this.mhengine.sendCommand({command: '*2*1*' + this.id + '##',log:this.logCmd});
     this.sendPacket();
   },
   moveDown: function() {
     this.log("["+this.id+"] Blind send moving down");
     this.runningDirection = Characteristic.PositionState.DECREASING;
-    this.mhengine.sendCommand({command: '*2*2*' + this.id + '##',log:true});
+    this.mhengine.sendCommand({command: '*2*2*' + this.id + '##',log:this.logCmd});
     this.sendPacket();
   },
   onBlind: function(id,direction) {
@@ -542,11 +544,11 @@ MyHomeBlindAccessory.prototype = {
     } else if (direction == '2'  ) {
       this.state = Characteristic.PositionState.DECREASING;
     }
-    if (this.runningDirection == this.state) {
+    if (this.packetTimeout != null && this.runningDirection == this.state) {
         clearTimeout(this.packetTimeout);
         this.packetTimeout = null;
-        this.evaluatePosition();
     }  
+    this.evaluatePosition();
   },
   evaluatePosition: function() {
     clearTimeout(this.positionTimeout); 
@@ -613,8 +615,6 @@ MyHomeBlindAccessory.prototype = {
     callback(null, this.state);
   },
   getServices: function() {
-    var that = this;
-
     var windowCoveringService = new Service.WindowCovering();
     var informationService = new Service.AccessoryInformation();
 
@@ -625,17 +625,17 @@ MyHomeBlindAccessory.prototype = {
 
     windowCoveringService
       .getCharacteristic(Characteristic.CurrentPosition)
-      .on('get', function(callback) { that.getPosition("position", callback);});
+      .on('get', function(callback) { this.getPosition("position", callback);}.bind(this));
 
     windowCoveringService
         .getCharacteristic(Characteristic.TargetPosition)
-        .on('get', function(callback) { that.getTarget('target', callback);})
-        .on('set', function(value, callback) { that.setTarget(value, callback);});
+        .on('get', function(callback) { this.getTarget("target", callback);}.bind(this))
+        .on('set', function(value, callback) { this.setTarget(value, callback);}.bind(this));
 
 
     windowCoveringService
         .getCharacteristic(Characteristic.PositionState)
-        .on('get', function(callback) { that.getState("position", callback);});
+        .on('get', function(callback) { this.getState("state", callback);}.bind(this));
 
     return [informationService, windowCoveringService];
   }
