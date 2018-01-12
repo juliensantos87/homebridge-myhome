@@ -221,11 +221,13 @@ MyHomeThermostatAccessory.prototype = {
   onThermostatEvent: function(id,event,value){
   	if (event =='temperature') {
   		this.temperature = value;
-  		this.log("["+this.id+"] zone["+this.zone+"] temperature (" + this.temperature + ")" );		
+  		this.log("["+this.id+"] zone["+this.zone+"] temperature (" + this.temperature + ")" );	
+      this.thermostatService.getCharacteristic(Characteristic.CurrentTemperature).updateStatus(this.temperature);
     }
   	else if (event =='targetTemperature') {
   		this.targetTemperature = value;
   		this.log("["+this.id+"] zone["+this.zone+"] target temperature (" + this.targetTemperature+ ")" );	
+      this.thermostatService.getCharacteristic(Characteristic.TargetTemperature).updateStatus(this.targetTemperature);
     }
     else if (event =='actuatorStatus') {
       var status ;
@@ -287,7 +289,8 @@ MyHomeThermostatAccessory.prototype = {
         status = 'Generic OFF';
         this.heatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
       }
-      this.log("["+this.id+"] zone["+this.zone+"] operation mode (" + status+ ")" );     
+      this.log("["+this.id+"] zone["+this.zone+"] operation mode (" + status+ ")" );   
+      this.thermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState).updateStatus(this.heatingCoolingState);  
     }
     else if (event =='cooling') {
      if (inArray(value,[1,2])) {
@@ -297,6 +300,7 @@ MyHomeThermostatAccessory.prototype = {
         this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
         this.log("["+this.id+"] zone["+this.zone+"] off "); 
       }
+      this.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).updateStatus(this.targetheatingCoolingState);  
     }
     else if (event =='heating') {
       if (inArray(value,[1,2])) {
@@ -306,6 +310,7 @@ MyHomeThermostatAccessory.prototype = {
         this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
         this.log("["+this.id+"] zone["+this.zone+"] off "); 
       }
+      this.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).updateStatus(this.targetheatingCoolingState); 
     }
  },
   getHeatingCoolingState: function(callback) {
@@ -350,39 +355,39 @@ MyHomeThermostatAccessory.prototype = {
     callback();
   },
  getServices: function() {
-    var thermostatService = new Service.Thermostat();
-    var informationService = new Service.AccessoryInformation();
+    this.thermostatService = new Service.Thermostat();
+    this.informationService = new Service.AccessoryInformation();
 
-    informationService
+    this.informationService
       .setCharacteristic(Characteristic.Manufacturer, "MyHome Assistant")
       .setCharacteristic(Characteristic.Model, "Thermostat")
       .setCharacteristic(Characteristic.SerialNumber, "xxx");
 
-    thermostatService
+    this.thermostatService
       .getCharacteristic(Characteristic.CurrentHeatingCoolingState)
       .on('get', function(callback) { this.getHeatingCoolingState(callback);}.bind(this));
 
-    thermostatService
+    this.thermostatService
       .getCharacteristic(Characteristic.TargetHeatingCoolingState)
       .on('get', function(callback) { this.getTargetHeatingCoolingState(callback);}.bind(this) )
       .on('set', function(value, callback) { this.setTargetHeatingCoolingState(value,callback);}.bind(this) );
 
-    thermostatService
+    this.thermostatService
       .getCharacteristic(Characteristic.CurrentTemperature)
       .on('get', function(callback) {this.getCurrentTemperature(callback);}.bind(this));
 
-    thermostatService
+    this.thermostatService
       .getCharacteristic(Characteristic.TargetTemperature)
       .on('get', function(callback) { this.getTargetTemperature(callback);}.bind(this))
       .on('set', function(value, callback) { this.setTargetTemperature(value,callback);}.bind(this));
 
-    thermostatService
+    this.thermostatService
       .getCharacteristic(Characteristic.TemperatureDisplayUnits)
       .on('get', function(callback) { this.getDisplayUnits(callback);}.bind(this))
       .on('set', function(value, callback) { this.setDisplayUnits(value,callback);}.bind(this));
 
 
-    return [informationService, thermostatService];
+    return [this.informationService, this.thermostatService];
   }
 };
 
@@ -423,6 +428,8 @@ MyHomeLightAccessory.prototype = {
       this.log("["+this.id+"] power on");
       this.value = true;
     }
+    this.lightbulbService
+      .getCharacteristic(Characteristic.On).updateValue(this.value);
   },
   setPowerState: function(characteristic, powerOn, callback) {
     if (powerOn) {
@@ -454,29 +461,29 @@ MyHomeLightAccessory.prototype = {
   
   
   getServices: function() {
-    var lightbulbService = new Service.Lightbulb();
-    var informationService = new Service.AccessoryInformation();
+    this.lightbulbService = new Service.Lightbulb();
+    this.informationService = new Service.AccessoryInformation();
 
-    informationService
+    this.informationService
       .setCharacteristic(Characteristic.Manufacturer, "MyHome Assistant")
       .setCharacteristic(Characteristic.Model, "Light")
       .setCharacteristic(Characteristic.SerialNumber, "xxx");
 
-    lightbulbService
+    this.lightbulbService
       .getCharacteristic(Characteristic.On)
       .on('get', function(callback) { this.getPowerState("power", callback);}.bind(this))
       .on('set', function(value, callback) { this.setPowerState("power", value, callback);}.bind(this));
 
     // if the dimmer is set to 1 than the brightness characteristic is added.
     if (this.dimmer) {
-		  lightbulbService
+		  this.lightbulbService
 	      .addCharacteristic(Characteristic.Brightness)
 	      .on('get', function(callback) { this.getBrightness("brightness", callback);}.bind(this))
 	      .on('set', function(value, callback) { this.setBrightness("brightness", value, callback);}.bind(this));
     } 
 	
 
-    return [informationService, lightbulbService];
+    return [this.informationService, this.lightbulbService];
   }
 };
 
@@ -544,6 +551,7 @@ MyHomeBlindAccessory.prototype = {
     } else if (direction == '2'  ) {
       this.state = Characteristic.PositionState.DECREASING;
     }
+    this.windowCoveringService.getCharacteristic(Characteristic.PositionState).updateStatus(this.state);
     if (this.packetTimeout != null && this.runningDirection == this.state) {
         clearTimeout(this.packetTimeout);
         this.packetTimeout = null;
@@ -567,6 +575,8 @@ MyHomeBlindAccessory.prototype = {
         this.positionTimeout = setTimeout(function(){this.evaluatePosition();}.bind(this), this.time / 100 * 1000);
       }
     }
+
+    this.windowCoveringService.getCharacteristic(Characteristic.CurrentPosition).updateStatus(this.position);
   },
   move: function() {
     if( this.packetTimeout == null) { // check if a command is pending  
@@ -615,28 +625,28 @@ MyHomeBlindAccessory.prototype = {
     callback(null, this.state);
   },
   getServices: function() {
-    var windowCoveringService = new Service.WindowCovering();
-    var informationService = new Service.AccessoryInformation();
+    this.windowCoveringService = new Service.WindowCovering();
+    this.informationService = new Service.AccessoryInformation();
 
-    informationService
+    this.informationService
       .setCharacteristic(Characteristic.Manufacturer, "MyHome Assistant")
       .setCharacteristic(Characteristic.Model, "WindowCovering")
       .setCharacteristic(Characteristic.SerialNumber, "xxx");
 
-    windowCoveringService
+    this.windowCoveringService
       .getCharacteristic(Characteristic.CurrentPosition)
       .on('get', function(callback) { this.getPosition("position", callback);}.bind(this));
 
-    windowCoveringService
+    this.windowCoveringService
         .getCharacteristic(Characteristic.TargetPosition)
         .on('get', function(callback) { this.getTarget("target", callback);}.bind(this))
         .on('set', function(value, callback) { this.setTarget(value, callback);}.bind(this));
 
 
-    windowCoveringService
+    this.windowCoveringService
         .getCharacteristic(Characteristic.PositionState)
         .on('get', function(callback) { this.getState("state", callback);}.bind(this));
 
-    return [informationService, windowCoveringService];
+    return [this.informationService, this.windowCoveringService];
   }
 };
