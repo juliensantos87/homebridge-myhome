@@ -39,7 +39,7 @@ module.exports = function(homebridge) {
 };
 
 function MyHomePlatform(log, config){
-  this.logCmd = false;
+  this.logCmd = true;
   // auth info
   this.host = config["host"];
   this.password =config["password"];
@@ -222,12 +222,12 @@ MyHomeThermostatAccessory.prototype = {
   	if (event =='temperature') {
   		this.temperature = value;
   		this.log("["+this.id+"] zone["+this.zone+"] temperature (" + this.temperature + ")" );	
-      this.thermostatService.getCharacteristic(Characteristic.CurrentTemperature).updateStatus(this.temperature);
+      this.thermostatService.getCharacteristic(Characteristic.CurrentTemperature).updateValue(this.temperature);
     }
   	else if (event =='targetTemperature') {
   		this.targetTemperature = value;
   		this.log("["+this.id+"] zone["+this.zone+"] target temperature (" + this.targetTemperature+ ")" );	
-      this.thermostatService.getCharacteristic(Characteristic.TargetTemperature).updateStatus(this.targetTemperature);
+      this.thermostatService.getCharacteristic(Characteristic.TargetTemperature).updateValue(this.targetTemperature);
     }
     else if (event =='actuatorStatus') {
       var status ;
@@ -290,27 +290,27 @@ MyHomeThermostatAccessory.prototype = {
         this.heatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
       }
       this.log("["+this.id+"] zone["+this.zone+"] operation mode (" + status+ ")" );   
-      this.thermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState).updateStatus(this.heatingCoolingState);  
+      this.thermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState).updateValue(this.heatingCoolingState);  
     }
     else if (event =='cooling') {
      if (inArray(value,[1,2])) {
-        this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.COOL;
+        this.targetheatingCoolingState = Characteristic.TargetHeatingCoolingState.COOL;
         this.log("["+this.id+"] zone["+this.zone+"] cooling ");   
-      } else if (this.targetheatingCoolingState != Characteristic.CurrentHeatingCoolingState.HEAT) {
-        this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
+      } else if (this.targetheatingCoolingState != Characteristic.TargetHeatingCoolingState.HEAT) {
+        this.targetheatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF;
         this.log("["+this.id+"] zone["+this.zone+"] off "); 
       }
-      this.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).updateStatus(this.targetheatingCoolingState);  
+      this.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).updateValue(this.targetheatingCoolingState);  
     }
     else if (event =='heating') {
       if (inArray(value,[1,2])) {
-        this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.HEAT;
+        this.targetheatingCoolingState = Characteristic.TargetHeatingCoolingState.HEAT;
         this.log("["+this.id+"] zone["+this.zone+"] heating ");   
-      } else if (this.targetheatingCoolingState != Characteristic.CurrentHeatingCoolingState.COOL) {
-        this.targetheatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
+      } else if (this.targetheatingCoolingState != Characteristic.TargetHeatingCoolingState.COOL) {
+        this.targetheatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF;
         this.log("["+this.id+"] zone["+this.zone+"] off "); 
       }
-      this.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).updateStatus(this.targetheatingCoolingState); 
+      this.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).updateValue(this.targetheatingCoolingState); 
     }
  },
   getHeatingCoolingState: function(callback) {
@@ -428,8 +428,7 @@ MyHomeLightAccessory.prototype = {
       this.log("["+this.id+"] power on");
       this.value = true;
     }
-    this.lightbulbService
-      .getCharacteristic(Characteristic.On).updateValue(this.value);
+    this.lightbulbService.getCharacteristic(Characteristic.On).updateValue(this.value);
   },
   setPowerState: function(characteristic, powerOn, callback) {
     if (powerOn) {
@@ -542,16 +541,15 @@ MyHomeBlindAccessory.prototype = {
     this.sendPacket();
   },
   onBlind: function(id,direction) {
-    this.log("["+this.id+"] change  dir : "+ direction + " pos:"+ this.position + " tag:" +  this.target);
-
-    if (direction == '0'  ) {
+    if (direction == '0'  && this.state != Characteristic.PositionState.STOPPED) {
       this.state = Characteristic.PositionState.STOPPED;
     } else if (direction == '1'  ) {
       this.state = Characteristic.PositionState.INCREASING;
     } else if (direction == '2'  ) {
       this.state = Characteristic.PositionState.DECREASING;
     }
-    this.windowCoveringService.getCharacteristic(Characteristic.PositionState).updateStatus(this.state);
+    this.windowCoveringService.getCharacteristic(Characteristic.PositionState).updateValue(this.state);
+    this.log("["+this.id+"] change  dir : "+ direction + " pos:"+ this.position + " tag:" +  this.target);
     if (this.packetTimeout != null && this.runningDirection == this.state) {
         clearTimeout(this.packetTimeout);
         this.packetTimeout = null;
@@ -561,22 +559,21 @@ MyHomeBlindAccessory.prototype = {
   evaluatePosition: function() {
     clearTimeout(this.positionTimeout); 
     if (this.state == Characteristic.PositionState.STOPPED) {
-      this.log("["+this.id+"] Blind STOP      pos:"+ this.position + " tag:" +  this.target);
+      this.log(  "["+this.id+"] Blind is STOPPED    pos:"+ this.position + " tag:" +  this.target);
     } else if (this.state == Characteristic.PositionState.INCREASING) {
-      this.log("["+this.id+"] Blind moving UP pos:"+ this.position + " tag:" +  this.target);
       if (this.position < 100) {
         this.position++;
         this.positionTimeout = setTimeout(function(){this.evaluatePosition();}.bind(this), this.time / 100 * 1000);
       }
+      this.log("["+this.id+"] Blind is moving UP  pos:"+ this.position + " tag:" +  this.target);
     } else if (this.state == Characteristic.PositionState.DECREASING) {
-      this.log("["+this.id+"] Blind moving DOWN pos:"+ this.position + " tag:" +  this.target);
       if (this.position > 0) {
         this.position--;
         this.positionTimeout = setTimeout(function(){this.evaluatePosition();}.bind(this), this.time / 100 * 1000);
       }
+      this.log("["+this.id+"] Blind is moving DOWN pos:"+ this.position + " tag:" +  this.target);
     }
-
-    this.windowCoveringService.getCharacteristic(Characteristic.CurrentPosition).updateStatus(this.position);
+    this.windowCoveringService.getCharacteristic(Characteristic.CurrentPosition).updateValue(this.position);
   },
   move: function() {
     if( this.packetTimeout == null) { // check if a command is pending  
@@ -590,9 +587,10 @@ MyHomeBlindAccessory.prototype = {
         if (this.state != Characteristic.PositionState.INCREASING &&  offset > 5 ) {
           this.moveUp();
         }
-      } else if (this.state != Characteristic.PositionState.STOPPED ){
-          this.moveStop();
       } else  {
+         if ( this.state != Characteristic.PositionState.STOPPED ) {
+            this.moveStop();
+         }         
          this.log("["+this.id+"] Blind position is good : stop moving "+ this.position + " tag:" +  this.target);
         return; 
       }
