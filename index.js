@@ -1,9 +1,9 @@
 'use strict';
 
-var request = require("request");
+var request = require('request');
 var Service, Characteristic;
 
-var myhome = require("myhome");
+var myhome = require('./lib/myhome');
 
 function decodeTemperature( data ) {
     var m = data.match(/(\d)(\d\d)(\d)/);
