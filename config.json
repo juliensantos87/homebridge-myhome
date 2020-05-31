@@ -10,6 +10,15 @@
 
     "platforms": [
         {
+            "name": "Config",
+            "port": 8581,
+            "auth": "form",
+            "theme": "dark-mode",
+            "tempUnits": "c",
+            "lang": "auto",
+            "platform": "config"
+        },
+        {
             "platform": "MyHome",
             "name": "MyHome",
             "host": "192.168.1.35",

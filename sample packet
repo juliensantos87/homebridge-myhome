@@ -1,0 +1,106 @@
+
+cmm : #4*#0#1##
+*4*1101*#0#1##     => Heating program 1
+*4*21*#0#1##       => Remote control enable
+*#4*1*14*0070*3##  => Dimension Set-Point temperature 7 degree
+
+Request to central unit: zone N operating mode
+cmm :*#4*#0#1##
+id:1 mode:MONITOR dir:IN data:*4*110#0180*#0#1##  => winter mode (manual) 18 degre  
+id:1 mode:MONITOR dir:IN data:*4*21*#0#1##
+id:1 mode:MONITOR dir:IN data:*#4*1*12*0180*3##   => (dim 12) probe stattus  ( 18,0 degree)
+id:1 mode:MONITOR dir:IN data:*4*1*1##            => Zone operation Heating
+id:1 mode:MONITOR dir:IN data:*#4*1*0*0251##      => (dim 0) current temp 25,1 degree
+id:1 mode:MONITOR dir:IN data:*#4*1#1*20*0##      => Actuators 0 OFF
+id:1 mode:MONITOR dir:IN data:*#4*1*19*0*0##      => valve state OFF  0*0(VC,VR)
+
+
+
+cmm : *#4*1##
+id:1 mode:MONITOR dir:IN data:*#4*1*0*0247##      => (dim 0) current temp 24,7 degree
+id:1 mode:MONITOR dir:IN data:*#4*1*12*0220*3##   => (dim 12) probe stattus  (  22,2 degree)
+id:1 mode:MONITOR dir:IN data:*4*303*1##          => generic OFF
+id:1 mode:MONITOR dir:IN data:*#4*1*14*0070*3##   => (dim 14) Target temp 7 deg 
+id:1 mode:MONITOR dir:IN data:*#4*1*13*4##        => (dim 13) Local offset OFF
+
+
+cmm : *#4*1*12##
+id:1 mode:MONITOR dir:IN data:*#4*1*12*0220*3##    => (dim 12) probe stattus  ( 22,2 degree )
+id:1 mode:MONITOR dir:IN data:*4*303*1##           => generic OFF
+
+
+cmm : *#4*1*13##
+id:1 mode:MONITOR dir:IN data:*#4*1*13*4##         => knob on local off
+
+
+cmm : *#4*1*14##
+id:1 mode:MONITOR dir:IN data:*#4*1*14*0070*3##    => set point temperature request ( 7 degre )
+
+
+cmm : *#4*1*15##
+id:1 mode:MONITOR dir:IN data:*#4*1*14*0070*3##    => set point temperature request ( 7 degre )
+
+
+cmm : *#4*1*19##
+
+
+action :
+cmd :  *#4*1*#1##   => set up in heating mode 
+
+Manual setting of zone N to temperature T
+cmd :  *#4*#0#1*#14*0180*1##  Central unit manual setting to temperature to  (0 zone1 ) 18 deg (heating)
+id:1 mode:MONITOR dir:IN data:*4*110#0180*#0#1##   => Heating Manual - 18 deg - (0 zone 1) 
+id:1 mode:MONITOR dir:IN data:*4*21*#0#1##         => Remote controle enable 
+id:1 mode:MONITOR dir:IN data:*#4*1*13*00##        => Dim 13 : 0 knob
+id:1 mode:MONITOR dir:IN data:*#4*1*0*0247##       => Dim 0  : current temp 24,7
+id:1 mode:MONITOR dir:IN data:*#4*1*12*0180*3##    => Dim 12 : target temp 18,0   
+id:1 mode:MONITOR dir:IN data:*4*1*1##             
+id:1 mode:MONITOR dir:IN data:*#4*1#1*20*0##     => Actuators 0 OFF
+id:1 mode:MONITOR dir:IN data:*#4*1*19*0*0##     => valve state OFF  0*0(VC,VR)
+
+Set N zone in off mode ( heating mode (103) or generic mode (303))
+cmd : *4*103*#0#1##   set zone 0 cen 1 to off 
+id:1 mode:MONITOR dir:IN data:*4*103*#0#1##      => Off Heating zone 0 cen 1 
+id:1 mode:MONITOR dir:IN data:*4*21*#0#1##       => remote control on   
+id:1 mode:MONITOR dir:IN data:*#4*1*13*00##      => => Dim 13 : 0 knob
+id:1 mode:MONITOR dir:IN data:*#4*1*0*0249##     => Dim 0  : current temp 24,9
+id:1 mode:MONITOR dir:IN data:*4*303*1##
+id:1 mode:MONITOR dir:IN data:*#4*1#1*20*0##     => Actuators 0 OFF
+id:1 mode:MONITOR dir:IN data:*#4*1*19*0*0##     => valve state OFF  0*0(VC,VR)
+
+Set N zone in protection mode 
+cmd : *4*102*#0#1##  Set zone 0 cen 1  in protection mode
+id:1 mode:MONITOR dir:IN data:*4*102*#0#1##
+id:1 mode:MONITOR dir:IN data:*4*21*#0#1##        => remote control on   
+id:1 mode:MONITOR dir:IN data:*#4*1*13*00##       => Dim 13 : 0 knob
+id:1 mode:MONITOR dir:IN data:*#4*1*0*0250##      => Dim 0  : current temp 25,0
+id:1 mode:MONITOR dir:IN data:*4*102*1##
+id:1 mode:MONITOR dir:IN data:*#4*1*12*0070*3##
+id:1 mode:MONITOR dir:IN data:*#4*1#1*20*0##      => Actuators 0 OFF
+id:1 mode:MONITOR dir:IN data:*#4*1*19*0*0##      => valve state OFF  0*0(VC,VR)
+
+Last set up weekly program activation
+cmd : *4*3100*#0#1##  Set zone 0 cen 1  in protection mode
+id:1 mode:MONITOR dir:IN data:*#4*1*0*0258##     
+id:1 mode:MONITOR dir:IN data:*4*1101*#0#1##     
+id:1 mode:MONITOR dir:IN data:*4*21*#0#1##       => remote control on   
+id:1 mode:MONITOR dir:IN data:*#4*1*13*00##      => Dim 13 : 0 knob
+id:1 mode:MONITOR dir:IN data:*#4*1*0*0258##     => Dim 0  : current temp 25,0
+id:1 mode:MONITOR dir:IN data:*#4*1#1*20*0##     => Actuators 0 OFF
+id:1 mode:MONITOR dir:IN data:*#4*1*19*0*0##     => valve state OFF  0*0(VC,VR)
+id:1 mode:MONITOR dir:IN data:*#4*1*14*0180*3##
+
+
+
+Holiday mode activation command
+cmd *4*13020#1103*#0#1##
+id:1 mode:MONITOR dir:IN data:*4*13021*#0#1##
+id:1 mode:MONITOR dir:IN data:*4*21*#0#1##      => remote control on   
+id:1 mode:MONITOR dir:IN data:*#13**15*200##
+id:1 mode:MONITOR dir:IN data:*#4*1*13*00##      => Dim 13 : 0 knob
+id:1 mode:MONITOR dir:IN data:*#4*1*0*0253##     => Dim 0  : current temp 25,3
+id:1 mode:MONITOR dir:IN data:*4*102*1##
+id:1 mode:MONITOR dir:IN data:*#4*1#1*20*0##    => Actuators 0 OFF
+id:1 mode:MONITOR dir:IN data:*#4*1*19*0*0##    => valve state OFF  0*0(VC,VR)
+
+
