@@ -58,7 +58,7 @@ id:1 mode:MONITOR dir:IN data:*4*1*1##
 id:1 mode:MONITOR dir:IN data:*#4*1#1*20*0##     => Actuators 0 OFF
 id:1 mode:MONITOR dir:IN data:*#4*1*19*0*0##     => valve state OFF  0*0(VC,VR)
 
-Set N zone in off mode ( heating mode (103) or generic mode (303))
+Set N zone in off mode ( heating mode (103) or generic mode (303))  *#4*103*#0#1##
 cmd : *4*103*#0#1##   set zone 0 cen 1 to off 
 id:1 mode:MONITOR dir:IN data:*4*103*#0#1##      => Off Heating zone 0 cen 1 
 id:1 mode:MONITOR dir:IN data:*4*21*#0#1##       => remote control on   

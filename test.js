@@ -44,9 +44,9 @@ ownClient.sendCommand({
 //	command:'*#4*1##',
 //	command:'*#4*1*14##',
 //	command:'*#4*1*0##',
-//   command:'*#4*#0#1*#14*0300*1##',  // -> set headting manual  
+   command:'*#4*#0#1*#14*0260*1##',  // -> set headting manual   //*#4*#0#1*14*070*1##
 // command:'*4*103*#0#1##', // set heating off
- command:'*4*102*#0#1##', // Porctecttion mode
+// command:'*4*102*#0#1##', // Porctecttion mode
 // command:'*4*304*#0#1##', // Auto mode   NOK
 
 //command:'*4*3100*#0#1##', // set generic the last weekly program
