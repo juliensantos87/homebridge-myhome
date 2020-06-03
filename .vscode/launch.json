@@ -22,7 +22,7 @@
                 "<node_internals>/**"
             ],
             "program": "/usr/local/bin/homebridge",
-            "args": ["-D"]
+            "args": ["I"]
         }
     ]
 }
