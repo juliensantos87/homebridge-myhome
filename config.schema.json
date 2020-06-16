@@ -1,0 +1,103 @@
+{
+    "pluginAlias": "MyHome",
+    "pluginType": "platform",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "title": "Name",
+                "type": "string",
+                "required": true,
+                "default": "MyHome"
+            },
+            "host": {
+                "title": "Myhome server adress",
+                "type": "string",
+                "required": true,
+                "default": "192.168.1.35"
+            },
+            "port": {
+                "title": "Myhome server port",
+                "type": "string",
+                "required": false,
+                "default": "20000"
+            },
+            "password": {
+                "title": "Myhome server password",
+                "type": "string",
+                "required": false,
+                "default": ""
+            },
+            "lights": {
+                "title": "Lights",
+                "buttonText": "Add Light",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "title": "id",
+                            "type": "integer",
+                            "required": true
+                        },
+                        "name": {
+                            "title": "Name",
+                            "type": "string",
+                            "required": false
+                        }
+                    }
+                }
+            },
+            "blinds": {
+                "title": "Blinds",
+                "buttonText": "Add blind",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "title": "id",
+                            "type": "integer",
+                            "required": true
+                        },
+                        "name": {
+                            "title": "Name",
+                            "type": "string",
+                            "required": false
+                        },
+                        "time": {
+                            "title": "time",
+                            "type": "integer",
+                            "required": true
+                        }
+                    }
+                }
+            },
+            "thermostats": {
+                "title": "Thermostats",
+                "buttonText": "Add Thermostat",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "title": "id",
+                            "type": "integer",
+                            "required": true
+                        },
+                        "zone": {
+                            "title": "zone",
+                            "type": "integer",
+                            "required": true
+                        },
+                        "name": {
+                            "title": "Name",
+                            "type": "string",
+                            "required": false
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

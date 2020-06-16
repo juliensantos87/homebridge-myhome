@@ -1,20 +1,20 @@
 {
-  "name": "homebridge-myhome",
-  "version": "0.0.1",
-  "description": "MyHome plugin for homebridge",
+  "name": "homebridge-myhome-unik",
+  "version": "0.1.0",
+  "description": "MyHome Legrand plugin for homebridge",
   "license": "ISC",
   "keywords": [
     "homebridge-plugin"
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/example/homebridge-lockitron.git"
+    "url": "git://github.com/bvial/homebridge-myhome.git"
   },
   "bugs": {
-    "url": "http://github.com/example/homebridge-lockitron/issues"
+    "url": "http://github.com/bvial/homebridge-myhome/issues"
   },
   "engines": {
-    "node": ">=0.12.0",
+    "node": ">=12.0.0",
     "homebridge": ">=0.2.0"
   },
   "dependencies": {
@@ -22,5 +22,14 @@
     "request": "^2.65.0",
     "sprintf-js": "^1.1.2"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "homepage": "https://github.com/bvial/homebridge-myhome#readme",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Bertrand Vial <bvial@github.com> (https://www.npmjs.com/~bvial)"
 }
