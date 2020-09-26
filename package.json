@@ -1,17 +1,24 @@
 {
   "name": "homebridge-myhome",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MyHome plugin for homebridge",
-  "license": "ISC",
+  "license": "MIT",
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "Legrand",
+    "Bticino",
+    "MyHome"
   ],
+  "author": {
+    "name": "juliensantos87"
+  },
+  "homepage": "https://github.com/juliensantos87/homebridge-myhome#readme",
   "repository": {
     "type": "git",
-    "url": "git://github.com/example/homebridge-lockitron.git"
+    "url": "git://github.com/juliensantos87/homebridge-myhome.git"
   },
   "bugs": {
-    "url": "http://github.com/example/homebridge-lockitron/issues"
+    "url": "http://github.com/juliensantos87/homebridge-myhome/issues"
   },
   "engines": {
     "node": ">=0.12.0",
