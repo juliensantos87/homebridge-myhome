@@ -65,6 +65,8 @@ function MyHomeLightAccessory(log, mhengine, id, dimmer) {
   this.dimmer = dimmer;
 
   this.value = false;
+
+  this.services = null;
 }
 
 MyHomeLightAccessory.prototype = {
@@ -74,6 +76,8 @@ MyHomeLightAccessory.prototype = {
     } else {
       this.value = true;
     }
+
+    this.services.getCharacteristic(Characteristic.On).updateValue(this.value);
   },
   setPowerState: function(characteristic, powerOn, callback) {
     if (powerOn) {
@@ -103,8 +107,6 @@ MyHomeLightAccessory.prototype = {
 	this.log("["+this.id+"] Getting Brightness"+this.value);
     callback(null, this.value);
   },
-  
-  
   getServices: function() {
     var that = this;
 
@@ -128,10 +130,11 @@ MyHomeLightAccessory.prototype = {
 	      .addCharacteristic(Characteristic.Brightness)
 	      .on('get', function(callback) { that.getBrightness("brightness", callback);})
 	      .on('set', function(value, callback) { that.setBrightness("brightness", value, callback);});
-      } 
-	
+      }
 
-    return [informationService, lightbulbService];
+      this.services = lightbulbService;
+
+      return [informationService, lightbulbService];
   }
 };
 
@@ -156,6 +159,8 @@ function MyHomeBlindAccessory(log, mhengine, id, time) {
 
   this.packetTimeout = null;
   this.positionTimeout = null;
+
+  this.services = null;
 }
 
 MyHomeBlindAccessory.prototype = {
@@ -190,6 +195,9 @@ MyHomeBlindAccessory.prototype = {
       this.isMoving = false;
       this.target = this.position;
       this.state = Characteristic.PositionState.STOPPED;
+
+      this.services.getCharacteristic(Characteristic.PositionState).updateValue(this.state);
+
     } else if (direction == '1') {
       this.isMoving = true;
 
@@ -210,6 +218,8 @@ MyHomeBlindAccessory.prototype = {
   },
   move: function() {
     var that = this;
+
+    this.services.getCharacteristic(Characteristic.CurrentPosition).updateValue(this.position);
 
     if (this.target < this.position) {
       if (!this.isMoving) {
@@ -275,6 +285,8 @@ MyHomeBlindAccessory.prototype = {
     windowCoveringService
         .getCharacteristic(Characteristic.PositionState)
         .on('get', function(callback) { that.getState("position", callback);});
+
+    this.services = windowCoveringService;
 
     return [informationService, windowCoveringService];
   }
