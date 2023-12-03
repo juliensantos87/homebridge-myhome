@@ -21,7 +21,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "/usr/local/bin/homebridge",
+            "program": "/opt/homebrew/bin/homebridge",
             "args": ["I"]
         }
     ]

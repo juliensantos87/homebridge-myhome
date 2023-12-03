@@ -1,7 +1,7 @@
 //@ts-check
 var OwnNet = require('./lib/OwnNet.js');
 var OwnProtcol = require('./lib/OwnProtcol.js');
-const sprintf = require("sprintf-js").sprintf;
+//const sprintf = require("sprintf-js").sprintf;
 
 const host = '192.168.1.35';
 const pass = '12345';
@@ -23,21 +23,21 @@ ownClient.on ('packet',function ( data ) {
 });
 ownClient.startMonitor();
 
-//monitor.scanSystem(function ( data ) {
-//	console.log ('scanSystem:%s',data.join());
-//});
+ownClient.scanSystem(function ( data ) {
+	console.log ('scanSystem:%s',data.join());
+});
 
-//monitor.scanUnconfigured(function ( data ) {
-//	console.log ('scanUnconfigured:%s',data.join());
-//});
+ownClient.scanUnconfigured(function ( data ) {
+	console.log ('scanUnconfigured:%s',data.join());
+});
 
-//monitor.scanConfigured(function ( data ) {
-//	console.log ('scanConfigured:%s',data.join());
-//});
+ownClient.scanConfigured(function ( data ) {
+	console.log ('scanConfigured:%s',data.join());
+});
 
 // Send light probe
 var lights =[];
-ownClient.sendCommand({
+//ownClient.sendCommand({
 //	command:'*#4*#0#1##',
 //	command:'*#1*0##',
 //	command:'*#4*#0#1##',
@@ -76,10 +76,10 @@ ownClient.sendCommand({
 //	command:'*4*303*#1##',     
 //	command:'*4*311*#1##',     
 
-    stopon: ['*#*1##', '*#*0##'],
-	packet: function(data) { lights.push(OwnProtcol.OwnProtcol.parseStatus(data)); },
-	done:function(data,index) { console.log ('ligths: %s',JSON.stringify(lights)); }}
-);
+ //   stopon: ['*#*1##', '*#*0##'],
+//	packet: function(data) { lights.push(OwnProtcol.OwnProtcol.parseStatus(data)); },
+//	done:function(data,index) { console.log ('ligths: %s',JSON.stringify(lights)); }}
+//);
 
 // Send automation probe
 //var automations =[];
@@ -97,8 +97,8 @@ ownClient.sendCommand({
 
 function setSetPoint(_address,_temperature) {
 	// Standard thermostat *4*40*%02d##*#4*#%02d*#14*%04d*3
-	var cmd = sprintf("*4*40*%02d##*#4*#%02d*#14*%04d*3##*#4*%02d*14##",_address,_address,_temperature * 10,_address);
-	ownClient.sendCommand({command: cmd});
+	//var cmd = sprintf("*4*40*%02d##*#4*#%02d*#14*%04d*3##*#4*%02d*14##",_address,_address,_temperature * 10,_address);
+	//ownClient.sendCommand({command: cmd});
 
 	// 4 Zones *#4*#0#%02d*#14*%04d*3
 }
